@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, maximum-scale=1, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Pacman</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">    
+    <style>
+        .beginScreen {
+            position: absolute; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-color: gray;
+        }
+        .beginScreen * {
+            padding: 4px;
+        }
+        .beginScreen .btn {
+            background-color: green;
+            color: white;
+            padding: 5px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        @media (min-width: 800px) {
+            .beginScreen {
+                height: 400px;
+                width: 400px;
+            }
+            canvas {
+                height: 400px;
+                width: 400px;
+            }
+            .controls {
+                height: 40px;
+            }
+        }
+        @media (max-width: 800px) {
+            .beginScreen {
+                height: 88vh;
+                width: 98vw;
+            }
+            canvas {
+                height: 88vh;
+                width: 98vw;
+            }
+            #container {
+                height: 98vh;
+                width: 98vw;
+            }
+            .controls {
+                height: 10vh;
+            }
+        }
+        .controls {
+            display: flex;
+            overflow: hidden;
+        }
+        .controls {
+            margin: 0px;
+            padding: 0px;
+            margin-left: 3px;
+            margin-right: 3px;
+            font-size: 40px;
+            color: gray;
+        }
+        #container {
+            position: relative;
+        }
+        body {
+            padding-left: 1vw;
+            padding-right: 1vw;
+            padding-top: 1vw;
+            padding-bottom: 1vw;
+            margin: 0px;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        .score {
+            font-size: 16px;
+            bottom: 0px;  
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            padding-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="beginScreen">
+            <div>The classic game, pacman.</div>
+            <div class="btn">eat some 'sweets'</div>
+        </div>
+        <canvas id="myCanvas"></canvas>       
+        <div class="controls">
+            <i direction="l" class="fa fa-arrow-circle-left"></i>
+            <i direction="r" class="fa fa-arrow-circle-right"></i>
+            <i direction="d" class="fa fa-arrow-circle-down"></i>
+            <i direction="u" class="fa fa-arrow-circle-up"></i>
+            <div class="score">Score</div>
+        </div>  
+    </div>
+</body>
+
+<script>
+
+    // delay in repeat key event
+    // score for pills
+
+    var grid = [
+        ['w','w','w','w','w','w','w','w','w','w'],
+        ['w','.','.','.','.','.','.','.','.','w'],
+        ['w','.','w','.','w','w','w','w','.','w'],
+        ['w','.','w','.','.','w','w','w','.','w'],
+        ['w','.','w','w','.','.','.','w','.','w'],
+        ['w','.','w','w','w','w','.','w','.','w'],
+        ['w','.','.','.','.','.','.','.','w','w'],
+        ['w','w','w','w','w','w','w','w','w','w']
+    ]
+
+    document.querySelector(".beginScreen").onclick = function(event) {
+        gameStart()
+    }
+
+    var buttons = document.querySelectorAll(".controls *")
+    for(var i = 0; i < buttons.length; i++) {
+        buttons[i].onclick = function(event) {
+            direction = event.target.getAttribute("direction")
+        }
+    }
+    
+    var gameLoop;
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    var canvasWidth;
+    var canvasHeight;
+    var gridSize = 20;
+    var pacman = {
+        x: gridSize, y: gridSize, 
+        nextX: null, nextY: null,
+        canMoveAgain: true,
+        directionX: 0,
+        directionY: 0,
+        finishMovement: function() {
+            pacman.directionX = 0;
+            pacman.directionY = 0;
+            pacman.nextX = null;
+            pacman.nextY = null;
+            pacman.canMoveAgain = true;
+            a.finishAnimating()
+        },
+        suggestedMovement: function() {
+            return {
+                x: (pacman.x + pacman.directionX), 
+                y: (pacman.y + pacman.directionY), 
+                width: gridSize, 
+                height: gridSize
+            }            
+        },
+    }
+    var gridWidth;
+    var gridHeight;
+    var score = 0;
+    var pressSpeed = 2;
+
+    function update() {
+        var hasHitSomething = false
+        for(var y = 0; y < grid.length; y++) {
+            for(var x = 0; x < grid[y].length; x++) {
+                var b = grid[y][x]
+                var gridBlock = {
+                    x: x*gridSize, y: y*gridSize, 
+                    width: gridSize, height: gridSize
+                }
+                var attemptedPacman = pacman.suggestedMovement()
+                if(b=="w" && hasHit(attemptedPacman,gridBlock)) {
+                    pacman.finishMovement()
+                    console.log("hit something")
+                    hasHitSomething = true;
+                    break;
+                } else if(b=='.' && hasHit(attemptedPacman, gridBlock)) {
+                    grid[y][x] = ' '
+                    break;
+                }
+            }
+            if(hasHitSomething) break;
+        }
+
+        if(hasHitSomething) {
+            return;
+        }
+
+        if(pacman.nextX && 
+            ((pacman.directionX > 0 && pacman.x < pacman.nextX) ||
+            (pacman.directionX < 0 && pacman.x > pacman.nextX))) {
+            pacman.x += pacman.directionX;
+            a.animate()
+            if(pacman.directionX > 0) {
+                a.changeRow(0)
+            } else {
+                a.changeRow(1)
+            }
+            if(pacman.x == pacman.nextX) {
+                pacman.finishMovement()
+            }
+        } else if(pacman.nextX) {
+            pacman.finishMovement()
+        }
+
+        if(pacman.nextY && 
+            ((pacman.directionY > 0 && pacman.y < pacman.nextY) ||
+            (pacman.directionY < 0 && pacman.y > pacman.nextY))) {
+            a.animate()
+            if(pacman.directionY > 0) {
+                a.changeRow(3)
+            } else {
+                a.changeRow(2)
+            }
+            pacman.y += pacman.directionY;
+            if(pacman.y == pacman.nextY) {
+                pacman.finishMovement()
+                a.finishAnimating()
+            }
+        } else if(pacman.nextY) {
+            pacman.finishMovement()
+            a.finishAnimating()
+        }
+
+    }
+
+    function draw() {
+        blankScreen()
+        grid.forEach((r, y) => {
+            r.forEach((b, x) => {
+                if(b == "w") {
+                    ctx.fillStyle = "brown"
+                    ctx.fillRect(x*gridSize, y*gridSize, gridSize, gridSize)
+                } else if(b == ".") {
+                    ctx.fillStyle = "black"
+                    ctx.fillRect(x*gridSize, y*gridSize, gridSize, gridSize)
+                    ctx.fillStyle = "white"
+                    ctx.beginPath()
+                    ctx.arc(x*gridSize + gridSize / 2, y*gridSize + gridSize / 2, 2, 0, 2 * Math.PI)
+                    ctx.fill()
+                }
+            })
+        })
+        a.draw(pacman.x, pacman.y)
+    }
+
+    function blankScreen() {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight)       
+    }
+
+    window.onkeydown = function(event) {
+        event.preventDefault()
+        if(!pacman.canMoveAgain) return
+        pacman.directionX = 0;
+        pacman.directionY = 0;
+        if(event.keyCode == 39) {
+            pacman.directionX = pressSpeed
+            pacman.nextX = pacman.x + gridSize
+            pacman.canMoveAgain = false;
+        }
+        else if(event.keyCode == 37) {
+            pacman.directionX = -pressSpeed
+            pacman.nextX = pacman.x - gridSize
+            pacman.canMoveAgain = false;
+        }
+        else if(event.keyCode == 38) {
+            pacman.directionY = -pressSpeed
+            pacman.nextY = pacman.y - gridSize
+            pacman.canMoveAgain = false;
+        }
+        else if(event.keyCode == 40) {
+            pacman.directionY = pressSpeed
+            pacman.nextY = pacman.y + gridSize
+            pacman.canMoveAgain = false;
+        }
+    }
+
+    function gameOver() {
+        clearInterval(gameLoop)
+        document.querySelector(".beginScreen").style.display = "flex"
+    }
+
+    function gameStart() {
+        canvasWidth = c.clientWidth;
+        canvasHeight = c.clientHeight;
+        gridWidth = canvasWidth / gridSize;
+        gridHeight = canvasHeight / gridSize;
+        c.setAttribute("width", canvasWidth);
+        c.setAttribute("height", canvasHeight);
+        score = 0;
+        var gameLoop = function() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop)
+        }
+        requestAnimationFrame(gameLoop)
+        document.querySelector(".beginScreen").style.display = "none";
+    }
+
+    blankScreen()
+    gameStart()
+
+    function hasHit(box1, box2) {
+        var box1Right = box1.x + box1.width
+        var box1Bottom = box1.y + box1.height  
+        var box2Right = box2.x + box2.width
+        var box2Bottom = box2.y + box2.height  
+        
+        if(box1Right > box2.x && box2Right > box1.x && 
+            box1Bottom > box2.y && box2Bottom > box1.y) return true;
+        else return false
+    }    
+
+    function Animan(row, numOfFrames) {
+        this.img = new Image();
+        this.img.src = './pacman.png';
+        this.totalNumberOfFrames = numOfFrames // ten images in the image (see the url above)
+        this.imageFrameNumber = 0; // This is changed to make the sprite animate  
+        this.widthOfImage; // find the width of the image
+        this.heightOfImage; // find the height of the image
+        this.widthOfSingleImage; // The width of each image in the spirite
+        this.loaded = false;
+        this.animationFrame;
+        this.row = row;
+
+        this.img.onload = function() {
+            this.loaded = true;
+            this.widthOfImage = this.img.width; 
+            this.heightOfImage = (this.img.height / 4); 
+            this.widthOfSingleImage = this.widthOfImage / this.totalNumberOfFrames; // The width of each image in the spirite
+        }.bind(this)
+    }
+
+    Animan.prototype.draw = function(x, y) {
+        if(!this.loaded) return
+
+        ctx.drawImage(this.img, 
+            this.imageFrameNumber * this.widthOfSingleImage, this.heightOfImage * this.row, // x and y - where in the sprite
+            this.widthOfSingleImage, this.heightOfImage, // width and height
+            x, y, // x and y - where on the screen
+            gridSize, gridSize // width and height
+        );           
+    }
+
+    Animan.prototype.animate = function() {
+        if(this.animationFrame) return
+        this.animationFrame = setInterval(function() {
+            this.imageFrameNumber++; // changes the sprite we look at
+            this.imageFrameNumber = this.imageFrameNumber % this.totalNumberOfFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
+        }.bind(this), 80)
+    }
+
+    Animan.prototype.finishAnimating = function() {
+        clearInterval(this.animationFrame)
+        this.animationFrame = undefined
+        this.imageFrameNumber = 1
+    }
+
+    Animan.prototype.changeRow = function(row) {
+        this.row = row
+    }
+
+    var a = new Animan(0, 2)
+</script>
+</html>
