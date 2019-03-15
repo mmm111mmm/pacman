@@ -140,20 +140,54 @@
     var canvasWidth;
     var canvasHeight;
     var gridSize = 20;
+
+    var ghost = {
+        x: gridSize*8, y: gridSize*4, 
+        ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
+        directionX: 0, directionY: -1,
+        nextY: gridSize,
+        animate: function() {
+            if(ghost.nextY && ghost.y != ghost.nextY) {
+                ghost.y += ghost.directionY;
+            }
+            if(ghost.nextX && ghost.x != ghost.nextX) {
+                ghost.x += ghost.directionX;
+            }
+            if(ghost.directionY > 0) {
+                ghost.ghostSprite.animate({ startSprite: 6, numSprites: 2 })
+            } else if (ghost.directionY < 0) {
+                ghost.ghostSprite.animate({ startSprite: 4, numSprites: 2 })
+            } else if(ghost.directionX > 0) {
+                ghost.ghostSprite.animate({ startSprite: 0, numSprites: 2 })
+            } else if(ghost.directionX < 0) {
+                ghost.ghostSprite.animate({ startSprite: 2, numSprites: 2 })
+            }            
+        }        
+    }
+
     var pacman = {
         x: gridSize, y: gridSize, 
         nextX: null, nextY: null,
-        canMoveAgain: true,
-        pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numFrames: 2}),
-        directionX: 0,
-        directionY: 0,
-        finishMovement: function() {
+        pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numFrames: 2, numRows: 4}),
+        directionX: 0, directionY: 0,
+        finishMovement: function(snapToPlace = true) {
             pacman.directionX = 0;
             pacman.directionY = 0;
+            if(snapToPlace) {
+                if(pacman.nextX) pacman.x = pacman.nextX
+                if(pacman.nextY) pacman.y = pacman.nextY
+            }
             pacman.nextX = null;
-            pacman.nextY = null;
-            pacman.canMoveAgain = true;
-            pacman.pacmanSprite.animate({turnOff: true})
+            pacman.nextY = null;            
+            pacman.pacmanSprite.animate({turnOff: true});
+        },
+        actualMovement: function() {
+            return {
+                x: (pacman.x), 
+                y: (pacman.y), 
+                width: gridSize, 
+                height: gridSize
+            }            
         },
         suggestedMovement: function() {
             return {
@@ -177,33 +211,33 @@
                 pacman.pacmanSprite.changeSpriteRow(1)
             }
         },
-        hasFinishedCurrentMove: function() {
-            if(pacman.canMoveAgain) {
-                pacman.directionX = 0;
-                pacman.directionY = 0;
-                return true
-            }
-            return false;
-        },
         startStepingUp: function() {
+            if(pacman.nextX) return
+            var remaining = pacman.x % gridSize
+            if(remaining == 0) remaining = gridSize
             pacman.directionY = pressSpeed
-            pacman.nextY = pacman.y + gridSize
-            pacman.canMoveAgain = false;
+            pacman.nextY = pacman.y + remaining
         }, 
         startStepingDown: function() {
+            if(pacman.nextX) return
+            var remaining = pacman.x % gridSize
+            if(remaining == 0) remaining = gridSize
             pacman.directionY = -pressSpeed
-            pacman.nextY = pacman.y - gridSize
-            pacman.canMoveAgain = false;
+            pacman.nextY = pacman.y - remaining
         },
         startStepingLeft: function() {
+            if(pacman.nextY) return
+            var remaining = pacman.x % gridSize
+            if(remaining == 0) remaining = gridSize
             pacman.directionX = -pressSpeed
-            pacman.nextX = pacman.x - gridSize
-            pacman.canMoveAgain = false;
+            pacman.nextX = pacman.x - remaining
         },
         startStepingRight: function() {
+            if(pacman.nextY) return
+            var remaining = pacman.x % gridSize
+            if(remaining == 0) remaining = gridSize
             pacman.directionX = pressSpeed
-            pacman.nextX = pacman.x + gridSize
-            pacman.canMoveAgain = false;
+            pacman.nextX = pacman.x + remaining
         },
         haveWeReachedOurDesiredLocation: function() {
             return (pacman.nextX && pacman.x == pacman.nextX) 
@@ -216,6 +250,7 @@
     var pressSpeed = 2;
 
     function update() {
+
         var hasHitSomething = false
         for(var y = 0; y < grid.length; y++) {
             for(var x = 0; x < grid[y].length; x++) {
@@ -226,11 +261,10 @@
                 }
                 var attemptedPacman = pacman.suggestedMovement()
                 if(b=="w" && hasHit(attemptedPacman, gridBlock)) {
-                    pacman.finishMovement()
-                    console.log("hit something")
+                    pacman.finishMovement(false)
                     hasHitSomething = true;
                     break;
-                } else if(b=='.' && hasHit(attemptedPacman, gridBlock)) {
+                } else if(b=='.' && hasHit(pacman.actualMovement(), gridBlock)) {
                     grid[y][x] = ' '
                     break;
                 }
@@ -244,10 +278,11 @@
 
         if(pacman.haveWeReachedOurDesiredLocation()) {
             pacman.finishMovement()
-            console.log("finishing movement")
         } else if(pacman.nextX || pacman.nextY) {
             pacman.animate()
         }
+
+        ghost.animate()
 
     }
 
@@ -269,6 +304,8 @@
             })
         })
         pacman.pacmanSprite.draw(pacman.x, pacman.y)
+
+        ghost.ghostSprite.draw(ghost.x, ghost.y)
     }
 
     function blankScreen() {
@@ -278,19 +315,17 @@
 
     window.onkeydown = function(event) {
         event.preventDefault()
-        if(pacman.hasFinishedCurrentMove())  {
-            if(event.keyCode == 39) {
-                pacman.startStepingRight()
-            }
-            else if(event.keyCode == 37) {
-                pacman.startStepingLeft()
-            }
-            else if(event.keyCode == 38) {
-                pacman.startStepingDown()
-            }
-            else if(event.keyCode == 40) {
-                pacman.startStepingUp()
-            }
+        if(event.keyCode == 39) {
+            pacman.startStepingRight()
+        }
+        else if(event.keyCode == 37) {
+            pacman.startStepingLeft()
+        }
+        else if(event.keyCode == 38) {
+            pacman.startStepingDown()
+        }
+        else if(event.keyCode == 40) {
+            pacman.startStepingUp()
         }
     }
 
@@ -330,7 +365,7 @@
         else return false
     }    
 
-    function Animan({sprite, row, numFrames}) {
+    function Animan({sprite, row, numFrames, numRows}) {
         this.img = new Image();
         this.img.src = sprite;
         this.totalNumberOfFrames = numFrames // ten images in the image (see the url above)
@@ -340,12 +375,13 @@
         this.widthOfSingleImage; // The width of each image in the spirite
         this.loaded = false;
         this.animationFrame;
+        this.numRows = numRows;
         this.row = row;
 
         this.img.onload = function() {
             this.loaded = true;
             this.widthOfImage = this.img.width; 
-            this.heightOfImage = (this.img.height / 4); 
+            this.heightOfImage = (this.img.height / this.numRows); 
             this.widthOfSingleImage = this.widthOfImage / this.totalNumberOfFrames; // The width of each image in the spirite
         }.bind(this)
     }
@@ -361,7 +397,7 @@
         );           
     }
 
-    Animan.prototype.animate = function({turnOff = false}) {
+    Animan.prototype.animate = function({ turnOff = false, startSprite = 0, numSprites }) {
         if(turnOff && this.animationFrame) {
             clearInterval(this.animationFrame)
             this.animationFrame = undefined
@@ -369,8 +405,9 @@
         } else if(!turnOff) {
             if(this.animationFrame) return
             this.animationFrame = setInterval(function() {
+                var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames
                 this.imageFrameNumber++; // changes the sprite we look at
-                this.imageFrameNumber = this.imageFrameNumber % this.totalNumberOfFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
+                this.imageFrameNumber = startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
             }.bind(this), 80)
         }
     }
