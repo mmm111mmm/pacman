@@ -142,9 +142,17 @@
         animate: function() {
             if(ghost.nextY && ghost.y != ghost.nextY) {
                 ghost.y += ghost.directionY;
+            } else if(ghost.nextY) {
+                ghost.nextY = null;
+                ghost.directionX = 0;
+                ghost.directionY = 0;
             }
             if(ghost.nextX && ghost.x != ghost.nextX) {
                 ghost.x += ghost.directionX;
+            } else if(ghost.nextX)  {
+                ghost.nextX = null;
+                ghost.directionX = 0;
+                ghost.directionY = 0;
             }
             if(ghost.directionY > 0) {
                 ghost.ghostSprite.animate({ startSprite: 6, numSprites: 2 })
@@ -203,33 +211,29 @@
                 pacman.pacmanSprite.animate({ row: 1 })
             }
         },
-        startStepingDown: function() {
+        startStepingVertical: function(dir = 1) {
             if(pacman.nextX) return
-            var remaining = gridSize - (pacman.y % gridSize)
+            pacman.directionY = pressSpeed * dir
+            var remaining;
+            if(dir > 0) {
+                remaining = gridSize - (pacman.y % gridSize)
+            } else {
+                remaining = pacman.y % gridSize
+            }
             if(remaining == 0) remaining = gridSize
-            pacman.directionY = pressSpeed
-            pacman.nextY = pacman.y + remaining
+            pacman.nextY = pacman.y + (remaining * dir)
         }, 
-        startStepingUp: function() {
-            if(pacman.nextX) return
-            var remaining = pacman.y % gridSize
-            if(remaining == 0) remaining = gridSize
-            pacman.directionY = -pressSpeed
-            pacman.nextY = pacman.y - remaining
-        },
-        startStepingLeft: function() {
+        startStepingHorizontal: function(dir = 1) {
             if(pacman.nextY) return
-            var remaining = pacman.x % gridSize
+            pacman.directionX = pressSpeed * dir
+            var remaining
+            if(dir > 0) {
+                remaining = gridSize - (pacman.x % gridSize)
+            } else {
+                remaining = pacman.x % gridSize
+            }            
             if(remaining == 0) remaining = gridSize
-            pacman.directionX = -pressSpeed
-            pacman.nextX = pacman.x - remaining
-        },
-        startStepingRight: function() {
-            if(pacman.nextY) return
-            var remaining = gridSize - (pacman.x % gridSize)
-            if(remaining == 0) remaining = gridSize
-            pacman.directionX = pressSpeed
-            pacman.nextX = pacman.x + remaining
+            pacman.nextX = pacman.x + (remaining * dir)
         },
         haveWeReachedOurDesiredLocation: function() {
             return (pacman.nextX && pacman.x == pacman.nextX) 
@@ -266,7 +270,6 @@
         }
 
         if(pacman.haveWeReachedOurDesiredLocation()) {
-            console.log("reached our desired location", pacman.x, pacman.y)
             pacman.finishMovement()
         } else if(pacman.nextX || pacman.nextY) {
             pacman.animate()
@@ -274,6 +277,30 @@
 
         ghost.animate()
 
+        if(!ghost.nextY && !ghost.nextX) {
+            var x = Math.round(ghost.x / gridSize);
+            var y = Math.round(ghost.y / gridSize);
+            var seenBlocks = [
+                {y: y-1, x: x+0 },
+                {y: y+1, x: x+0 },
+                {y: y+0, x: x-1 },
+                {y: y+0, x: x+1 }
+            ]
+            //console.log(seenBlocks)
+            seenBlocks = seenBlocks.filter(b => {
+                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
+            })
+            var block = Math.floor(Math.random() * (seenBlocks.length))
+            block = seenBlocks[block]
+            //console.log(x, block.x, y, block.y)
+            if(block.y == y) {
+                ghost.nextX = block.x * gridSize
+                ghost.directionX = block.x > x ? 1 : -1
+            } else {
+                ghost.nextY = block.y * gridSize
+                ghost.directionY = block.y > y ? 1 : -1
+            }
+        }
     }
 
     function draw() {
@@ -306,16 +333,16 @@
     window.onkeydown = function(event) {
         event.preventDefault()
         if(event.keyCode == 39) {
-            pacman.startStepingRight()
+            pacman.startStepingHorizontal()
         }
         else if(event.keyCode == 37) {
-            pacman.startStepingLeft()
+            pacman.startStepingHorizontal(-1)
         }
         else if(event.keyCode == 38) {
-            pacman.startStepingUp()
+            pacman.startStepingVertical(-1)
         }
         else if(event.keyCode == 40) {
-            pacman.startStepingDown()
+            pacman.startStepingVertical()
         }
     }
 
@@ -360,9 +387,6 @@
         this.img.src = sprite;
         this.totalNumberOfFrames = numFrames // ten images in the image (see the url above)
         this.imageFrameNumber = 0; // This is changed to make the sprite animate  
-        this.widthOfImage; // find the width of the image
-        this.heightOfImage; // find the height of the image
-        this.widthOfSingleImage; // The width of each image in the spirite
         this.loaded = false;
         this.animationFrame;
         this.numRows = numRows;
@@ -370,15 +394,14 @@
 
         this.img.onload = function() {
             this.loaded = true;
-            this.widthOfImage = this.img.width; 
-            this.heightOfImage = (this.img.height / this.numRows); 
+            this.widthOfImage = this.img.width; // find the width of the image
+            this.heightOfImage = (this.img.height / this.numRows); // find the height of the image
             this.widthOfSingleImage = this.widthOfImage / this.totalNumberOfFrames; // The width of each image in the spirite
         }.bind(this)
     }
 
     Animan.prototype.draw = function(x, y) {
         if(!this.loaded) return
-
         ctx.drawImage(this.img, 
             this.imageFrameNumber * this.widthOfSingleImage, this.heightOfImage * this.row, // x and y - where in the sprite
             this.widthOfSingleImage, this.heightOfImage, // width and height
@@ -389,16 +412,17 @@
 
     Animan.prototype.animate = function({ turnOff = false, row, startSprite = 0, numSprites }) {
         if(row || row == 0) this.row = row;
+        if(startSprite || startSprite == 0) this.startSprite = startSprite;        
         if(turnOff && this.animationFrame) {
             clearInterval(this.animationFrame);
             this.animationFrame = undefined;
             this.imageFrameNumber = 1;     
-        } else if(!turnOff) {
-            if(this.animationFrame) return
+        } else if(!turnOff && !this.animationFrame) {
             this.animationFrame = setInterval(function() {
+                console.log(startSprite)
                 var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames;
                 this.imageFrameNumber++; // changes the sprite we look at
-                this.imageFrameNumber = startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
+                this.imageFrameNumber = this.startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
             }.bind(this), 80)
         }
     }
