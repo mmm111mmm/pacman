@@ -108,6 +108,10 @@
 
     // score for pills
 
+    document.querySelector(".beginScreen").onclick = function(event) {
+        gameStart()
+    }
+
     var grid = [
         ['w','w','w','w','w','w','w','w','w','w'],
         ['w','.','.','.','.','.','.','.','.','w'],
@@ -119,19 +123,19 @@
         ['w','w','w','w','w','w','w','w','w','w']
     ]
 
-    document.querySelector(".beginScreen").onclick = function(event) {
-        gameStart()
-    }
-    
-    var gameLoop;
     var c = document.getElementById("myCanvas");
     var ctx = c.getContext("2d");
+    var gameLoop;
     var canvasWidth;
     var canvasHeight;
     var gridSize = 20;
+    var gridWidth;
+    var gridHeight;
+    var score = 0;
+    var pressSpeed = 2;
 
     var ghost = {
-        x: gridSize*8, y: gridSize*4, 
+        x: gridSize*8, y: gridSize*5, 
         ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
         directionX: 0, directionY: -1,
         nextY: gridSize,
@@ -170,7 +174,7 @@
             pacman.nextY = null;            
             pacman.pacmanSprite.animate({turnOff: true});
         },
-        actualMovement: function() {
+        box: function() {
             return {
                 x: (pacman.x), 
                 y: (pacman.y), 
@@ -189,15 +193,14 @@
         animate: function() {
             pacman.y += pacman.directionY;
             pacman.x += pacman.directionX;
-            pacman.pacmanSprite.animate({})
             if(pacman.directionY > 0) {
-                pacman.pacmanSprite.changeSpriteRow(3)
+                pacman.pacmanSprite.animate({ row: 3 })
             } else if (pacman.directionY < 0) {
-                pacman.pacmanSprite.changeSpriteRow(2)
+                pacman.pacmanSprite.animate({ row: 2 })
             } else if(pacman.directionX > 0) {
-                pacman.pacmanSprite.changeSpriteRow(0)
+                pacman.pacmanSprite.animate({ row: 0 })
             } else if(pacman.directionX < 0) {
-                pacman.pacmanSprite.changeSpriteRow(1)
+                pacman.pacmanSprite.animate({ row: 1 })
             }
         },
         startStepingDown: function() {
@@ -233,10 +236,6 @@
             || (pacman.nextY && pacman.y == pacman.nextY)            
         }
     }
-    var gridWidth;
-    var gridHeight;
-    var score = 0;
-    var pressSpeed = 2;
 
     function update() {
 
@@ -254,7 +253,7 @@
                     hasHitSomething = true;
                     console.log("hit something")
                     break;
-                } else if(b=='.' && hasHit(pacman.actualMovement(), gridBlock)) {
+                } else if(b=='.' && hasHit(pacman.box(), gridBlock)) {
                     grid[y][x] = ' '
                     break;
                 }
@@ -388,23 +387,20 @@
         );           
     }
 
-    Animan.prototype.animate = function({ turnOff = false, startSprite = 0, numSprites }) {
+    Animan.prototype.animate = function({ turnOff = false, row, startSprite = 0, numSprites }) {
+        if(row || row == 0) this.row = row;
         if(turnOff && this.animationFrame) {
-            clearInterval(this.animationFrame)
-            this.animationFrame = undefined
-            this.imageFrameNumber = 1            
+            clearInterval(this.animationFrame);
+            this.animationFrame = undefined;
+            this.imageFrameNumber = 1;     
         } else if(!turnOff) {
             if(this.animationFrame) return
             this.animationFrame = setInterval(function() {
-                var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames
+                var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames;
                 this.imageFrameNumber++; // changes the sprite we look at
                 this.imageFrameNumber = startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
             }.bind(this), 80)
         }
-    }
-
-    Animan.prototype.changeSpriteRow = function(row) {
-        this.row = row
     }
 
 </script>
