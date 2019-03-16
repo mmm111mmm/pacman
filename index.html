@@ -106,8 +106,11 @@
 
 <script>
 
-    // score for pills
+    // can kill pacman
     // multiple ghosts
+    // ghosts spawn from middle
+    // score for pills
+    // level 1 - one ghost, two ghosts, etc
 
     document.querySelector(".beginScreen").onclick = function(event) {
         gameStart()
@@ -124,8 +127,6 @@
         ['w','w','w','w','w','w','w','w','w','w']
     ]
 
-    var c = document.getElementById("myCanvas");
-    var ctx = c.getContext("2d");
     var gameLoop;
     var canvasWidth;
     var canvasHeight;
@@ -134,27 +135,36 @@
     var gridHeight;
     var score = 0;
     var pressSpeed = 2;
+    var ctx;
 
     var ghost = {
         x: gridSize*8, y: gridSize*5, 
         ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
         directionX: 0, directionY: -1,
         nextY: gridSize,
-        animate: function() {
-            if(ghost.nextY && ghost.y != ghost.nextY) {
-                ghost.y += ghost.directionY;
-            } else if(ghost.nextY) {
+        move: function() {
+            if(ghost.nextY &&  ghost.y == ghost.nextY) {
                 ghost.nextY = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
+            } else {
+                ghost.y += ghost.directionY;
             }
-            if(ghost.nextX && ghost.x != ghost.nextX) {
-                ghost.x += ghost.directionX;
-            } else if(ghost.nextX)  {
+            if(ghost.nextX && ghost.x == ghost.nextX)  {
                 ghost.nextX = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
+            } else {
+                ghost.x += ghost.directionX;
             }
+            if(!this.nextY && !this.nextX) {
+                if(!this.tryToChasePacman()) {
+                    this.chooseRandomDirection()
+                }
+            }
+            this.changeSpriteBasedOnDirection()
+        },
+        changeSpriteBasedOnDirection: function() {
             if(ghost.directionY > 0) {
                 ghost.ghostSprite.animate({ startSprite: 6, numSprites: 2 })
             } else if (ghost.directionY < 0) {
@@ -163,7 +173,7 @@
                 ghost.ghostSprite.animate({ startSprite: 0, numSprites: 2 })
             } else if(ghost.directionX < 0) {
                 ghost.ghostSprite.animate({ startSprite: 2, numSprites: 2 })
-            }            
+            }    
         },
         tryToChasePacman: function() {
             var x = Math.round(this.x / gridSize);
@@ -228,6 +238,12 @@
         nextX: null, nextY: null,
         pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numFrames: 2, numRows: 4}),
         directionX: 0, directionY: 0,
+        suggestedMovement: function() {
+            return {
+                x: (pacman.x + pacman.directionX), 
+                y: (pacman.y + pacman.directionY)
+            }            
+        },
         finishMovement: function(snapToPlace = true) {
             pacman.directionX = 0;
             pacman.directionY = 0;
@@ -239,25 +255,7 @@
             pacman.nextY = null;            
             pacman.pacmanSprite.animate({turnOff: true});
         },
-        box: function() {
-            return {
-                x: (pacman.x), 
-                y: (pacman.y), 
-                width: gridSize, 
-                height: gridSize
-            }            
-        },
-        suggestedMovement: function() {
-            return {
-                x: (pacman.x + pacman.directionX), 
-                y: (pacman.y + pacman.directionY), 
-                width: gridSize, 
-                height: gridSize
-            }            
-        },
-        animate: function() {
-            pacman.y += pacman.directionY;
-            pacman.x += pacman.directionX;
+        changeSpriteBasedOnDirection: function() {
             if(pacman.directionY > 0) {
                 pacman.pacmanSprite.animate({ row: 3 })
             } else if (pacman.directionY < 0) {
@@ -292,58 +290,45 @@
             if(remaining == 0) remaining = gridSize
             pacman.nextX = pacman.x + (remaining * dir)
         },
-        haveWeReachedOurDesiredLocation: function() {
-            return (pacman.nextX && pacman.x == pacman.nextX) 
-            || (pacman.nextY && pacman.y == pacman.nextY)            
+        moveAndInteractWithGrid: function() {
+            var hasHitSomething = false
+            for(var y = 0; y < grid.length; y++) {
+                for(var x = 0; x < grid[y].length; x++) {
+                    var b = grid[y][x]
+                    var gridBlock = {
+                        x: x*gridSize, y: y*gridSize, 
+                        width: gridSize, height: gridSize
+                    }
+                    if(b=="w" && hasHit(pacman.suggestedMovement(), gridBlock)) {
+                        this.finishMovement(false)
+                        hasHitSomething = true;
+                        break;
+                    } else if(b=='.' && hasHit(pacman, gridBlock)) {
+                        grid[y][x] = ' '
+                        break;
+                    }
+                }
+                if(hasHitSomething) break;
+            }            
+            //
+            pacman.y += pacman.directionY;
+            pacman.x += pacman.directionX;
+            this.changeSpriteBasedOnDirection()
+            if((pacman.nextX && pacman.x == pacman.nextX) 
+            || (pacman.nextY && pacman.y == pacman.nextY)) {
+                this.finishMovement()
+            }            
         }
     }
 
     function update() {
-
-        var hasHitSomething = false
-        for(var y = 0; y < grid.length; y++) {
-            for(var x = 0; x < grid[y].length; x++) {
-                var b = grid[y][x]
-                var gridBlock = {
-                    x: x*gridSize, y: y*gridSize, 
-                    width: gridSize, height: gridSize
-                }
-                var attemptedPacman = pacman.suggestedMovement()
-                if(b=="w" && hasHit(attemptedPacman, gridBlock)) {
-                    pacman.finishMovement(false)
-                    hasHitSomething = true;
-                    console.log("hit something")
-                    break;
-                } else if(b=='.' && hasHit(pacman.box(), gridBlock)) {
-                    grid[y][x] = ' '
-                    break;
-                }
-            }
-            if(hasHitSomething) break;
-        }
-
-        if(hasHitSomething) {
-            return;
-        }
-
-        if(pacman.haveWeReachedOurDesiredLocation()) {
-            pacman.finishMovement()
-        } else if(pacman.nextX || pacman.nextY) {
-            pacman.animate()
-        }
-
-        ghost.animate()
-
-        if(!ghost.nextY && !ghost.nextX) {
-            if(!ghost.tryToChasePacman()) {
-                ghost.chooseRandomDirection()
-            }
-
-        }
+        pacman.moveAndInteractWithGrid()
+        ghost.move()
     }
 
     function draw() {
-        blankScreen()
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight)       
         grid.forEach((r, y) => {
             r.forEach((b, x) => {
                 if(b == "w") {
@@ -360,13 +345,7 @@
             })
         })
         pacman.pacmanSprite.draw(pacman.x, pacman.y)
-
         ghost.ghostSprite.draw(ghost.x, ghost.y)
-    }
-
-    function blankScreen() {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight)       
     }
 
     window.onkeydown = function(event) {
@@ -386,11 +365,14 @@
     }
 
     function gameOver() {
-        clearInterval(gameLoop)
         document.querySelector(".beginScreen").style.display = "flex"
+        clearInterval(gameLoop)
     }
 
     function gameStart() {
+        document.querySelector(".beginScreen").style.display = "none";
+        var c = document.getElementById("myCanvas");
+        ctx = c.getContext("2d");
         canvasWidth = c.clientWidth;
         canvasHeight = c.clientHeight;
         gridWidth = canvasWidth / gridSize;
@@ -404,13 +386,15 @@
             requestAnimationFrame(gameLoop)
         }
         requestAnimationFrame(gameLoop)
-        document.querySelector(".beginScreen").style.display = "none";
     }
 
-    blankScreen()
     gameStart()
 
-    function hasHit(box1, box2) {
+    function hasHit(box1, box2, boxSize = 20) {
+        if(box1.width == undefined) box1.width = boxSize;
+        if(box1.height == undefined) box1.height = boxSize;
+        if(box2.width == undefined) box2.width = boxSize;
+        if(box2.height == undefined) box2.height = boxSize;
         var box1Right = box1.x + box1.width
         var box1Bottom = box1.y + box1.height  
         var box2Right = box2.x + box2.width
