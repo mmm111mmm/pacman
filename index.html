@@ -137,19 +137,23 @@
     var ghost = {
         x: gridSize*8, y: gridSize*5, 
         ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
-        directionX: 0, directionY: -1,
-        nextY: gridSize,
+        directionX: 0, directionY: 0,
+        nextY: null, nextX: null,
         animate: function() {
-            if(ghost.nextY && ghost.y != ghost.nextY) {
+            console.log("yeah", ghost.y, ghost.nextY, ghost.directionY)
+            if(ghost.nextY && ghost.nextY != ghost.y) {
+                console.log("moving")
                 ghost.y += ghost.directionY;
-            } else if(ghost.nextY) {
+            } else if(ghost.nextY && ghost.nextY == ghost.y) {
+                console.log("cany")
                 ghost.nextY = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
             }
             if(ghost.nextX && ghost.x != ghost.nextX) {
                 ghost.x += ghost.directionX;
-            } else if(ghost.nextX)  {
+            } else if(ghost.nextX && ghost.nextX == ghost.x)  {
+                console.log("canx")
                 ghost.nextX = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
@@ -275,32 +279,57 @@
             pacman.animate()
         }
 
-        ghost.animate()
-
         if(!ghost.nextY && !ghost.nextX) {
             var x = Math.round(ghost.x / gridSize);
             var y = Math.round(ghost.y / gridSize);
-            var seenBlocks = [
-                {y: y-1, x: x+0 },
-                {y: y+1, x: x+0 },
-                {y: y+0, x: x-1 },
-                {y: y+0, x: x+1 }
-            ]
-            //console.log(seenBlocks)
-            seenBlocks = seenBlocks.filter(b => {
-                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
-            })
-            var block = Math.floor(Math.random() * (seenBlocks.length))
-            block = seenBlocks[block]
-            //console.log(x, block.x, y, block.y)
-            if(block.y == y) {
-                ghost.nextX = block.x * gridSize
-                ghost.directionX = block.x > x ? 1 : -1
-            } else {
-                ghost.nextY = block.y * gridSize
-                ghost.directionY = block.y > y ? 1 : -1
+            var rightPlaces = []
+            for(var i = x+1; i < grid[y].length; i++) {
+                if(grid[y][i] != "w") {
+                    rightPlaces.push([i, y])
+                } else 
+                    break;
+            }
+            var leftPlaces = []
+            for(var i = x-1; i > 0; i--) {
+                if(grid[y][i] != "w") {
+                    leftPlaces.push([i, y])
+                } else 
+                    break;
+            }
+            var upPlaces = []
+            for(var i = y-1; i > 0; i--) {
+                if(grid[i][x] != "w") {
+                    upPlaces.push([x,i])
+                } else 
+                    break;
+            }
+            var downPlaces = []
+            for(var i = y+1; i < grid.length; i++) {
+                if(grid[i][x] != "w")
+                    downPlaces.push([x,i])
+                else 
+                    break
+            }
+
+            var possibles = [leftPlaces.reverse()[0], 
+                rightPlaces.reverse()[0],
+                upPlaces.reverse()[0],
+                downPlaces.reverse()[0]]
+            .filter(f => f != undefined)
+
+            var possibleNum = Math.floor(Math.random() * (possibles.length - 1))
+            var possible = possibles[possibleNum]
+
+            if(ghost.x != (possible[0] * gridSize)) {
+                ghost.nextX = possible[0] * gridSize                
+                ghost.directionX = (ghost.nextX > ghost.x) ? +1 : -1;            }
+            if(ghost.y != (possible[1] * gridSize)) {
+                ghost.nextY = possible[1] * gridSize
+                ghost.directionY = (ghost.nextY > ghost.y) ? +1 : -1;
             }
         }
+        ghost.animate()
+
     }
 
     function draw() {
