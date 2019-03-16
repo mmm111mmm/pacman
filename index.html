@@ -107,6 +107,7 @@
 <script>
 
     // score for pills
+    // multiple ghosts
 
     document.querySelector(".beginScreen").onclick = function(event) {
         gameStart()
@@ -137,23 +138,19 @@
     var ghost = {
         x: gridSize*8, y: gridSize*5, 
         ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
-        directionX: 0, directionY: 0,
-        nextY: null, nextX: null,
+        directionX: 0, directionY: -1,
+        nextY: gridSize,
         animate: function() {
-            console.log("yeah", ghost.y, ghost.nextY, ghost.directionY)
-            if(ghost.nextY && ghost.nextY != ghost.y) {
-                console.log("moving")
+            if(ghost.nextY && ghost.y != ghost.nextY) {
                 ghost.y += ghost.directionY;
-            } else if(ghost.nextY && ghost.nextY == ghost.y) {
-                console.log("cany")
+            } else if(ghost.nextY) {
                 ghost.nextY = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
             }
             if(ghost.nextX && ghost.x != ghost.nextX) {
                 ghost.x += ghost.directionX;
-            } else if(ghost.nextX && ghost.nextX == ghost.x)  {
-                console.log("canx")
+            } else if(ghost.nextX)  {
                 ghost.nextX = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
@@ -279,57 +276,65 @@
             pacman.animate()
         }
 
-        if(!ghost.nextY && !ghost.nextX) {
-            var x = Math.round(ghost.x / gridSize);
-            var y = Math.round(ghost.y / gridSize);
-            var rightPlaces = []
-            for(var i = x+1; i < grid[y].length; i++) {
-                if(grid[y][i] != "w") {
-                    rightPlaces.push([i, y])
-                } else 
-                    break;
-            }
-            var leftPlaces = []
-            for(var i = x-1; i > 0; i--) {
-                if(grid[y][i] != "w") {
-                    leftPlaces.push([i, y])
-                } else 
-                    break;
-            }
-            var upPlaces = []
-            for(var i = y-1; i > 0; i--) {
-                if(grid[i][x] != "w") {
-                    upPlaces.push([x,i])
-                } else 
-                    break;
-            }
-            var downPlaces = []
-            for(var i = y+1; i < grid.length; i++) {
-                if(grid[i][x] != "w")
-                    downPlaces.push([x,i])
-                else 
-                    break
-            }
-
-            var possibles = [leftPlaces.reverse()[0], 
-                rightPlaces.reverse()[0],
-                upPlaces.reverse()[0],
-                downPlaces.reverse()[0]]
-            .filter(f => f != undefined)
-
-            var possibleNum = Math.floor(Math.random() * (possibles.length - 1))
-            var possible = possibles[possibleNum]
-
-            if(ghost.x != (possible[0] * gridSize)) {
-                ghost.nextX = possible[0] * gridSize                
-                ghost.directionX = (ghost.nextX > ghost.x) ? +1 : -1;            }
-            if(ghost.y != (possible[1] * gridSize)) {
-                ghost.nextY = possible[1] * gridSize
-                ghost.directionY = (ghost.nextY > ghost.y) ? +1 : -1;
-            }
-        }
         ghost.animate()
 
+        var x = Math.round(ghost.x / gridSize);
+        var y = Math.round(ghost.y / gridSize);
+
+
+        if(!ghost.nextY && !ghost.nextX) {
+            // If we can see pacman, go for him
+            var pX = Math.round(pacman.x / gridSize);
+            var pY = Math.round(pacman.y / gridSize);
+            var canSee = false
+            if(y == pY) {
+                if(pX < x) 
+                    for(var i = x - 1, canSee = true; i > pX && canSee; i--)
+                        canSee = grid[y][i] != "w"
+                else if(pX > x) 
+                    for(var i = x + 1, canSee = true; i < pX && canSee; i++)
+                        canSee = grid[y][i] != "w"
+                if(canSee) {
+                    ghost.nextX = pacman.x
+                    ghost.directionX = (pX < x) ? -1: 1;
+                }
+            }
+            else if(x == pX) {
+                if(pY < y) 
+                    for(var i = y - 1, canSee = true; i > pY && canSee; i--)
+                        canSee = grid[i][x] != "w"
+                else if(pY > y) 
+                    for(var i = y + 1, canSee = true; i < pY && canSee; i++)
+                        canSee = grid[i][x] != "w"
+                if(canSee) {
+                    ghost.nextY = pacman.y
+                    ghost.directionY = (pY < y) ? -1: 1;
+                }
+            }
+
+            if(ghost.nextY || ghost.nextX) return;
+
+            // Otherwise, if we can't see
+            // pacman, let's just chose a random location
+            var seenBlocks = [
+                {y: y-1, x: x+0 },
+                {y: y+1, x: x+0 },
+                {y: y+0, x: x-1 },
+                {y: y+0, x: x+1 }
+            ]
+            .filter(b => {
+                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
+            })
+            var block = Math.floor(Math.random() * (seenBlocks.length))
+            block = seenBlocks[block]
+            if(block.y == y) {
+                ghost.nextX = block.x * gridSize
+                ghost.directionX = block.x > x ? 1 : -1
+            } else {
+                ghost.nextY = block.y * gridSize
+                ghost.directionY = block.y > y ? 1 : -1
+            }
+        }
     }
 
     function draw() {
@@ -448,7 +453,6 @@
             this.imageFrameNumber = 1;     
         } else if(!turnOff && !this.animationFrame) {
             this.animationFrame = setInterval(function() {
-                console.log(startSprite)
                 var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames;
                 this.imageFrameNumber++; // changes the sprite we look at
                 this.imageFrameNumber = this.startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
