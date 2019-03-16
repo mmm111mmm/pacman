@@ -164,7 +164,63 @@
             } else if(ghost.directionX < 0) {
                 ghost.ghostSprite.animate({ startSprite: 2, numSprites: 2 })
             }            
-        }        
+        },
+        tryToChasePacman: function() {
+            var x = Math.round(this.x / gridSize);
+            var y = Math.round(this.y / gridSize);
+            var pX = Math.round(pacman.x / gridSize);
+            var pY = Math.round(pacman.y / gridSize);
+            var canSee = false
+            if(y == pY) {
+                if(pX < x) 
+                    for(var i = x - 1, canSee = true; i > pX && canSee; i--)
+                        canSee = grid[y][i] != "w"
+                else if(pX > x) 
+                    for(var i = x + 1, canSee = true; i < pX && canSee; i++)
+                        canSee = grid[y][i] != "w"
+                if(canSee) {
+                    ghost.nextX = pacman.x
+                    ghost.directionX = (pX < x) ? -1: 1;
+                    return true;
+                }
+            }
+            else if(x == pX) {
+                if(pY < y) 
+                    for(var i = y - 1, canSee = true; i > pY && canSee; i--)
+                        canSee = grid[i][x] != "w"
+                else if(pY > y) 
+                    for(var i = y + 1, canSee = true; i < pY && canSee; i++)
+                        canSee = grid[i][x] != "w"
+                if(canSee) {
+                    ghost.nextY = pacman.y
+                    ghost.directionY = (pY < y) ? -1: 1;
+                    return true;
+                }
+            }     
+            return false;       
+        },
+        chooseRandomDirection: function() {
+            var x = Math.round(this.x / gridSize);
+            var y = Math.round(this.y / gridSize);
+            var seenBlocks = [
+                {y: y-1, x: x+0 },
+                {y: y+1, x: x+0 },
+                {y: y+0, x: x-1 },
+                {y: y+0, x: x+1 }
+            ]
+            .filter(b => {
+                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
+            })
+            var block = Math.floor(Math.random() * (seenBlocks.length))
+            block = seenBlocks[block]
+            if(block.y == y) {
+                this.nextX = block.x * gridSize
+                this.directionX = block.x > x ? 1 : -1
+            } else {
+                this.nextY = block.y * gridSize
+                this.directionY = block.y > y ? 1 : -1
+            }            
+        }
     }
 
     var pacman = {
@@ -278,62 +334,11 @@
 
         ghost.animate()
 
-        var x = Math.round(ghost.x / gridSize);
-        var y = Math.round(ghost.y / gridSize);
-
-
         if(!ghost.nextY && !ghost.nextX) {
-            // If we can see pacman, go for him
-            var pX = Math.round(pacman.x / gridSize);
-            var pY = Math.round(pacman.y / gridSize);
-            var canSee = false
-            if(y == pY) {
-                if(pX < x) 
-                    for(var i = x - 1, canSee = true; i > pX && canSee; i--)
-                        canSee = grid[y][i] != "w"
-                else if(pX > x) 
-                    for(var i = x + 1, canSee = true; i < pX && canSee; i++)
-                        canSee = grid[y][i] != "w"
-                if(canSee) {
-                    ghost.nextX = pacman.x
-                    ghost.directionX = (pX < x) ? -1: 1;
-                }
-            }
-            else if(x == pX) {
-                if(pY < y) 
-                    for(var i = y - 1, canSee = true; i > pY && canSee; i--)
-                        canSee = grid[i][x] != "w"
-                else if(pY > y) 
-                    for(var i = y + 1, canSee = true; i < pY && canSee; i++)
-                        canSee = grid[i][x] != "w"
-                if(canSee) {
-                    ghost.nextY = pacman.y
-                    ghost.directionY = (pY < y) ? -1: 1;
-                }
+            if(!ghost.tryToChasePacman()) {
+                ghost.chooseRandomDirection()
             }
 
-            if(ghost.nextY || ghost.nextX) return;
-
-            // Otherwise, if we can't see
-            // pacman, let's just chose a random location
-            var seenBlocks = [
-                {y: y-1, x: x+0 },
-                {y: y+1, x: x+0 },
-                {y: y+0, x: x-1 },
-                {y: y+0, x: x+1 }
-            ]
-            .filter(b => {
-                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
-            })
-            var block = Math.floor(Math.random() * (seenBlocks.length))
-            block = seenBlocks[block]
-            if(block.y == y) {
-                ghost.nextX = block.x * gridSize
-                ghost.directionX = block.x > x ? 1 : -1
-            } else {
-                ghost.nextY = block.y * gridSize
-                ghost.directionY = block.y > y ? 1 : -1
-            }
         }
     }
 
