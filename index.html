@@ -359,6 +359,12 @@
             new Ghost(8, 5),
             new Ghost(2, 6),
         ]        
+        pacman.x = gridSize;
+        pacman.y = gridSize;
+        pacman.directionX = 0
+        pacman.directionY = 0
+        pacman.nextX = null;
+        pacman.nextY = null;
         canvasWidth = c.clientWidth;
         canvasHeight = c.clientHeight;
         c.setAttribute("width", canvasWidth);
