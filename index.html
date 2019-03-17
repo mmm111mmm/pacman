@@ -106,7 +106,6 @@
 
 <script>
 
-    // can kill pacman
     // multiple ghosts
     // ghosts spawn from middle
     // score for pills
@@ -139,40 +138,33 @@
 
     var ghost = {
         x: gridSize*8, y: gridSize*5, 
-        ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numFrames: 8, numRows: 1}),
-        directionX: 0, directionY: -1,
-        nextY: gridSize,
+        ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numCols: 8, numRows: 1}),
+        directionX: 0, directionY: 0,
+        nextY: null, nextX: null,
         move: function() {
-            if(ghost.nextY &&  ghost.y == ghost.nextY) {
+            ghost.x += ghost.directionX;
+            ghost.y += ghost.directionY;
+            if((ghost.x == ghost.nextX) ||
+               (ghost.y == ghost.nextY))  {
+                ghost.nextX = null;
                 ghost.nextY = null;
                 ghost.directionX = 0;
                 ghost.directionY = 0;
-            } else {
-                ghost.y += ghost.directionY;
             }
-            if(ghost.nextX && ghost.x == ghost.nextX)  {
-                ghost.nextX = null;
-                ghost.directionX = 0;
-                ghost.directionY = 0;
-            } else {
-                ghost.x += ghost.directionX;
-            }
-            if(!this.nextY && !this.nextX) {
-                if(!this.tryToChasePacman()) {
-                    this.chooseRandomDirection()
-                }
+            if(!this.nextY && !this.nextX && !this.tryToChasePacman()) {
+                this.chooseRandomDirection()
             }
             this.changeSpriteBasedOnDirection()
         },
         changeSpriteBasedOnDirection: function() {
             if(ghost.directionY > 0) {
-                ghost.ghostSprite.animate({ startSprite: 6, numSprites: 2 })
+                ghost.ghostSprite.animate({ col: 6, colNum: 2 })
             } else if (ghost.directionY < 0) {
-                ghost.ghostSprite.animate({ startSprite: 4, numSprites: 2 })
+                ghost.ghostSprite.animate({ col: 4, colNum: 2 })
             } else if(ghost.directionX > 0) {
-                ghost.ghostSprite.animate({ startSprite: 0, numSprites: 2 })
+                ghost.ghostSprite.animate({ col: 0, colNum: 2 })
             } else if(ghost.directionX < 0) {
-                ghost.ghostSprite.animate({ startSprite: 2, numSprites: 2 })
+                ghost.ghostSprite.animate({ col: 2, colNum: 2 })
             }    
         },
         tryToChasePacman: function() {
@@ -193,8 +185,7 @@
                     ghost.directionX = (pX < x) ? -1: 1;
                     return true;
                 }
-            }
-            else if(x == pX) {
+            } else if(x == pX) {
                 if(pY < y) 
                     for(var i = y - 1, canSee = true; i > pY && canSee; i--)
                         canSee = grid[i][x] != "w"
@@ -207,7 +198,7 @@
                     return true;
                 }
             }     
-            return false;       
+            return false;
         },
         chooseRandomDirection: function() {
             var x = Math.round(this.x / gridSize);
@@ -236,94 +227,73 @@
     var pacman = {
         x: gridSize, y: gridSize, 
         nextX: null, nextY: null,
-        pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numFrames: 2, numRows: 4}),
+        pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numCols: 2, numRows: 4}),
         directionX: 0, directionY: 0,
-        suggestedMovement: function() {
-            return {
-                x: (pacman.x + pacman.directionX), 
-                y: (pacman.y + pacman.directionY)
-            }            
-        },
-        finishMovement: function(snapToPlace = true) {
-            pacman.directionX = 0;
-            pacman.directionY = 0;
-            if(snapToPlace) {
-                if(pacman.nextX) pacman.x = pacman.nextX
-                if(pacman.nextY) pacman.y = pacman.nextY
-            }
-            pacman.nextX = null;
-            pacman.nextY = null;            
-            pacman.pacmanSprite.animate({turnOff: true});
-        },
         changeSpriteBasedOnDirection: function() {
             if(pacman.directionY > 0) {
-                pacman.pacmanSprite.animate({ row: 3 })
+                pacman.pacmanSprite.animate({ row: 3, col: 0, colNum: 2 })
             } else if (pacman.directionY < 0) {
-                pacman.pacmanSprite.animate({ row: 2 })
+                pacman.pacmanSprite.animate({ row: 2, col: 0, colNum: 2 })
             } else if(pacman.directionX > 0) {
-                pacman.pacmanSprite.animate({ row: 0 })
+                pacman.pacmanSprite.animate({ row: 0, col: 0, colNum: 2 })
             } else if(pacman.directionX < 0) {
-                pacman.pacmanSprite.animate({ row: 1 })
+                pacman.pacmanSprite.animate({ row: 1, col: 0, colNum: 2 })
             }
         },
         startStepingVertical: function(dir = 1) {
-            if(pacman.nextX) return
+            if(pacman.nextX || !this.canMoveInDirection({dirY: dir})) return
             pacman.directionY = pressSpeed * dir
             var remaining;
-            if(dir > 0) {
-                remaining = gridSize - (pacman.y % gridSize)
-            } else {
-                remaining = pacman.y % gridSize
-            }
+            if(dir > 0) remaining = gridSize - (pacman.y % gridSize)
+            else remaining = pacman.y % gridSize
             if(remaining == 0) remaining = gridSize
             pacman.nextY = pacman.y + (remaining * dir)
         }, 
         startStepingHorizontal: function(dir = 1) {
-            if(pacman.nextY) return
+            if(pacman.nextY || !this.canMoveInDirection({dirX: dir})) return
             pacman.directionX = pressSpeed * dir
             var remaining
-            if(dir > 0) {
-                remaining = gridSize - (pacman.x % gridSize)
-            } else {
-                remaining = pacman.x % gridSize
-            }            
+            if(dir > 0) remaining = gridSize - (pacman.x % gridSize)
+            else remaining = pacman.x % gridSize
             if(remaining == 0) remaining = gridSize
             pacman.nextX = pacman.x + (remaining * dir)
         },
+        canMoveInDirection: function({dirX=0, dirY=0}) {
+            var x = Math.round(this.x / gridSize);
+            var y = Math.round(this.y / gridSize);        
+            var sx = x + ((dirX > 0) ? 1 : 0)
+            sx = sx + ((dirX < 0) ? -1 : 0)
+            var sy = y + ((dirY > 0) ? 1 : 0)
+            sy = sy + ((dirY < 0) ? -1 : 0)
+            return grid[sy][sx] != "w"            
+        },
         moveAndInteractWithGrid: function() {
-            var hasHitSomething = false
-            for(var y = 0; y < grid.length; y++) {
-                for(var x = 0; x < grid[y].length; x++) {
-                    var b = grid[y][x]
-                    var gridBlock = {
-                        x: x*gridSize, y: y*gridSize, 
-                        width: gridSize, height: gridSize
-                    }
-                    if(b=="w" && hasHit(pacman.suggestedMovement(), gridBlock)) {
-                        this.finishMovement(false)
-                        hasHitSomething = true;
-                        break;
-                    } else if(b=='.' && hasHit(pacman, gridBlock)) {
-                        grid[y][x] = ' '
-                        break;
-                    }
-                }
-                if(hasHitSomething) break;
-            }            
-            //
+            var x = Math.round(this.x / gridSize);
+            var y = Math.round(this.y / gridSize);        
+            var b = grid[y][x]
+            if(b == '.') {
+                grid[y][x] = ' '
+            }
             pacman.y += pacman.directionY;
             pacman.x += pacman.directionX;
+
+            var gx = Math.round(ghost.x / gridSize);
+            var gy = Math.round(ghost.y / gridSize);        
+            if(x == gx && y == gy) {
+                gameOver()
+            }
+
             this.changeSpriteBasedOnDirection()
+            // stop movement if reached place
             if((pacman.nextX && pacman.x == pacman.nextX) 
             || (pacman.nextY && pacman.y == pacman.nextY)) {
-                this.finishMovement()
+                pacman.directionX = 0;
+                pacman.directionY = 0;
+                pacman.nextX = null;
+                pacman.nextY = null;            
+                pacman.pacmanSprite.animate({turnOff: true});
             }            
         }
-    }
-
-    function update() {
-        pacman.moveAndInteractWithGrid()
-        ghost.move()
     }
 
     function draw() {
@@ -381,7 +351,8 @@
         c.setAttribute("height", canvasHeight);
         score = 0;
         var gameLoop = function() {
-            update();
+            pacman.moveAndInteractWithGrid()
+            ghost.move()            
             draw();
             requestAnimationFrame(gameLoop)
         }
@@ -390,61 +361,38 @@
 
     gameStart()
 
-    function hasHit(box1, box2, boxSize = 20) {
-        if(box1.width == undefined) box1.width = boxSize;
-        if(box1.height == undefined) box1.height = boxSize;
-        if(box2.width == undefined) box2.width = boxSize;
-        if(box2.height == undefined) box2.height = boxSize;
-        var box1Right = box1.x + box1.width
-        var box1Bottom = box1.y + box1.height  
-        var box2Right = box2.x + box2.width
-        var box2Bottom = box2.y + box2.height  
-        
-        if(box1Right > box2.x && box2Right > box1.x && 
-            box1Bottom > box2.y && box2Bottom > box1.y) return true;
-        else return false
-    }    
-
-    function Animan({sprite, row, numFrames, numRows}) {
+    function Animan({sprite, row, numCols, numRows}) {
         this.img = new Image();
         this.img.src = sprite;
-        this.totalNumberOfFrames = numFrames // ten images in the image (see the url above)
         this.imageFrameNumber = 0; // This is changed to make the sprite animate  
-        this.loaded = false;
-        this.animationFrame;
-        this.numRows = numRows;
         this.row = row;
-
         this.img.onload = function() {
-            this.loaded = true;
-            this.widthOfImage = this.img.width; // find the width of the image
-            this.heightOfImage = (this.img.height / this.numRows); // find the height of the image
-            this.widthOfSingleImage = this.widthOfImage / this.totalNumberOfFrames; // The width of each image in the spirite
+            this.heightOfImage = this.img.height / numRows; // find the height of the image
+            this.widthOfImage = this.img.width / numCols; // The width of each image in the spirite
         }.bind(this)
     }
 
-    Animan.prototype.draw = function(x, y) {
-        if(!this.loaded) return
+    Animan.prototype.draw = function(x, y, gridSize = 20) {
+        if(!this.widthOfImage) return
         ctx.drawImage(this.img, 
-            this.imageFrameNumber * this.widthOfSingleImage, this.heightOfImage * this.row, // x and y - where in the sprite
-            this.widthOfSingleImage, this.heightOfImage, // width and height
+            this.imageFrameNumber * this.widthOfImage, this.heightOfImage * this.row, // x and y - where in the sprite
+            this.widthOfImage, this.heightOfImage, // width and height
             x, y, // x and y - where on the screen
             gridSize, gridSize // width and height
         );           
     }
 
-    Animan.prototype.animate = function({ turnOff = false, row, startSprite = 0, numSprites }) {
+    Animan.prototype.animate = function({ turnOff = false, row, col = 0, colNum }) {
         if(row || row == 0) this.row = row;
-        if(startSprite || startSprite == 0) this.startSprite = startSprite;        
+        if(col || col == 0) this.startSprite = col;        
         if(turnOff && this.animationFrame) {
             clearInterval(this.animationFrame);
             this.animationFrame = undefined;
             this.imageFrameNumber = 1;     
         } else if(!turnOff && !this.animationFrame) {
             this.animationFrame = setInterval(function() {
-                var totalFrames = numSprites ? numSprites : this.totalNumberOfFrames;
                 this.imageFrameNumber++; // changes the sprite we look at
-                this.imageFrameNumber = this.startSprite + this.imageFrameNumber % totalFrames; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
+                this.imageFrameNumber = this.startSprite + this.imageFrameNumber % colNum; // Change this from 0 to 1 to 2 ... upto 9 and back to 0 again, then 1...
             }.bind(this), 80)
         }
     }
