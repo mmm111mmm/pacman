@@ -130,6 +130,15 @@
     var score = 0;
     var c = document.getElementById("myCanvas");
     var ctx;
+
+    var pr1 = new Image();
+    pr1.src = './pr1.png'
+    var pr2 = new Image();
+    pr2.src = './pr2.png'
+    var pl1 = new Image();
+    pl1.src = './pl1.png'
+    var pl2 = new Image();
+    pl2.src = './pl2.png'
     
     // A ghost in the pacman game
     function Ghost(x, y) {
@@ -221,8 +230,12 @@
         }            
     }
 
-    // Since object for the pacman character
+    // Single object for the pacman character
     var pacman = {
+        rightAni: [pr1, pr2],
+        leftAni: [pl1, pl2],
+        currAni: [pr1, pr2],
+        aniIter: 0,
         pacmanSprite: new Animan({ sprite: './pacman.png', row: 0, numCols: 2, numRows: 4}),
         init: function() {
             this.x = gridSize
@@ -231,6 +244,11 @@
             this.directionY = 0
             this.requestX = 0
             this.requestY = 0
+            this.img = pr1
+            setInterval(function() {
+                this.aniIter = (++this.aniIter) % this.currAni.length
+                this.img = this.currAni[this.aniIter]
+            }.bind(this), 500)
         },
         changeSpriteBasedOnDirection: function() {
             if(pacman.directionY > 0) {
@@ -238,9 +256,9 @@
             } else if (pacman.directionY < 0) {
                 pacman.pacmanSprite.animate({ row: 2, col: 0, colNum: 2 })
             } else if(pacman.directionX > 0) {
-                pacman.pacmanSprite.animate({ row: 0, col: 0, colNum: 2 })
+                this.currAni = this.rightAni
             } else if(pacman.directionX < 0) {
-                pacman.pacmanSprite.animate({ row: 1, col: 0, colNum: 2 })
+                this.currAni = this.leftAni
             }
         },
         startStepingVertical: function(dir = 1) {
@@ -314,7 +332,7 @@
                 }
             })
         })
-        pacman.pacmanSprite.draw(pacman.x, pacman.y)
+        ctx.drawImage(pacman.img, pacman.x, pacman.y, gridSize, gridSize)
         ghosts.forEach(g => 
             g.ghostSprite.draw(g.x, g.y)
         )
