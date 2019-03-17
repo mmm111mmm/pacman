@@ -106,10 +106,9 @@
 
 <script>
 
-    // multiple ghosts
+    // grid for proper pacman game
     // ghosts spawn from middle
     // score for pills
-    // level 1 - one ghost, two ghosts, etc
 
     document.querySelector(".beginScreen").onclick = function(event) {
         gameStart()
@@ -130,98 +129,99 @@
     var canvasWidth;
     var canvasHeight;
     var gridSize = 20;
-    var gridWidth;
-    var gridHeight;
     var score = 0;
-    var pressSpeed = 2;
     var ctx;
 
-    var ghost = {
-        x: gridSize*8, y: gridSize*5, 
-        ghostSprite: new Animan({ sprite: './ghost.png', row: 0, numCols: 8, numRows: 1}),
-        directionX: 0, directionY: 0,
-        nextY: null, nextX: null,
-        move: function() {
-            ghost.x += ghost.directionX;
-            ghost.y += ghost.directionY;
-            if((ghost.x == ghost.nextX) ||
-               (ghost.y == ghost.nextY))  {
-                ghost.nextX = null;
-                ghost.nextY = null;
-                ghost.directionX = 0;
-                ghost.directionY = 0;
-            }
-            if(!this.nextY && !this.nextX && !this.tryToChasePacman()) {
-                this.chooseRandomDirection()
-            }
-            this.changeSpriteBasedOnDirection()
-        },
-        changeSpriteBasedOnDirection: function() {
-            if(ghost.directionY > 0) {
-                ghost.ghostSprite.animate({ col: 6, colNum: 2 })
-            } else if (ghost.directionY < 0) {
-                ghost.ghostSprite.animate({ col: 4, colNum: 2 })
-            } else if(ghost.directionX > 0) {
-                ghost.ghostSprite.animate({ col: 0, colNum: 2 })
-            } else if(ghost.directionX < 0) {
-                ghost.ghostSprite.animate({ col: 2, colNum: 2 })
-            }    
-        },
-        tryToChasePacman: function() {
-            var x = Math.round(this.x / gridSize);
-            var y = Math.round(this.y / gridSize);
-            var pX = Math.round(pacman.x / gridSize);
-            var pY = Math.round(pacman.y / gridSize);
-            var canSee = false
-            if(y == pY) {
-                if(pX < x) 
-                    for(var i = x - 1, canSee = true; i > pX && canSee; i--)
-                        canSee = grid[y][i] != "w"
-                else if(pX > x) 
-                    for(var i = x + 1, canSee = true; i < pX && canSee; i++)
-                        canSee = grid[y][i] != "w"
-                if(canSee) {
-                    ghost.nextX = pacman.x
-                    ghost.directionX = (pX < x) ? -1: 1;
-                    return true;
-                }
-            } else if(x == pX) {
-                if(pY < y) 
-                    for(var i = y - 1, canSee = true; i > pY && canSee; i--)
-                        canSee = grid[i][x] != "w"
-                else if(pY > y) 
-                    for(var i = y + 1, canSee = true; i < pY && canSee; i++)
-                        canSee = grid[i][x] != "w"
-                if(canSee) {
-                    ghost.nextY = pacman.y
-                    ghost.directionY = (pY < y) ? -1: 1;
-                    return true;
-                }
-            }     
-            return false;
-        },
-        chooseRandomDirection: function() {
-            var x = Math.round(this.x / gridSize);
-            var y = Math.round(this.y / gridSize);
-            var seenBlocks = [
-                {y: y-1, x: x+0 },
-                {y: y+1, x: x+0 },
-                {y: y+0, x: x-1 },
-                {y: y+0, x: x+1 }
-            ]
-            .filter(b => {
-                return grid[b.y][b.x] && grid[b.y][b.x] != "w"
-            })
-            var block = Math.floor(Math.random() * (seenBlocks.length))
-            block = seenBlocks[block]
-            if(block.y == y) {
-                this.nextX = block.x * gridSize
-                this.directionX = block.x > x ? 1 : -1
-            } else {
-                this.nextY = block.y * gridSize
-                this.directionY = block.y > y ? 1 : -1
-            }            
+    function Ghost(x, y) {
+        this.x = x * gridSize
+        this.y = y * gridSize
+        this.ghostSprite = new Animan({ sprite: './ghost.png', row: 0, numCols: 8, numRows: 1})
+        this.directionX = 0
+        this.directionY = 0
+        this.nextY = null
+        this.nextX = null
+    }
+    Ghost.prototype.move = function() {
+        this.x += this.directionX;
+        this.y += this.directionY;
+        if((this.x == this.nextX) ||
+            (this.y == this.nextY))  {
+            this.nextX = null;
+            this.nextY = null;
+            this.directionX = 0;
+            this.directionY = 0;
         }
+        if(!this.nextY && !this.nextX && !this.tryToChasePacman()) {
+            this.chooseRandomDirection()
+        }
+        this.changeSpriteBasedOnDirection()
+    }
+    Ghost.prototype.changeSpriteBasedOnDirection = function() {
+        if(this.directionY > 0) {
+            this.ghostSprite.animate({ col: 6, colNum: 2 })
+        } else if (this.directionY < 0) {
+            this.ghostSprite.animate({ col: 4, colNum: 2 })
+        } else if(this.directionX > 0) {
+            this.ghostSprite.animate({ col: 0, colNum: 2 })
+        } else if(this.directionX < 0) {
+            this.ghostSprite.animate({ col: 2, colNum: 2 })
+        }    
+    }
+    Ghost.prototype.tryToChasePacman = function() {
+        var x = Math.round(this.x / gridSize);
+        var y = Math.round(this.y / gridSize);
+        var pX = Math.round(pacman.x / gridSize);
+        var pY = Math.round(pacman.y / gridSize);
+        var canSee = false
+        if(y == pY) {
+            if(pX < x) 
+                for(var i = x - 1, canSee = true; i > pX && canSee; i--)
+                    canSee = grid[y][i] != "w"
+            else if(pX > x) 
+                for(var i = x + 1, canSee = true; i < pX && canSee; i++)
+                    canSee = grid[y][i] != "w"
+            if(canSee) {
+                this.nextX = pacman.x
+                this.directionX = (pX < x) ? -1: 1;
+                return true;
+            }
+        } else if(x == pX) {
+            if(pY < y) 
+                for(var i = y - 1, canSee = true; i > pY && canSee; i--)
+                    canSee = grid[i][x] != "w"
+            else if(pY > y) 
+                for(var i = y + 1, canSee = true; i < pY && canSee; i++)
+                    canSee = grid[i][x] != "w"
+            if(canSee) {
+                this.nextY = pacman.y
+                this.directionY = (pY < y) ? -1: 1;
+                return true;
+            }
+        }     
+        return false;
+    }
+    Ghost.prototype.chooseRandomDirection = function() {
+        var x = Math.round(this.x / gridSize);
+        var y = Math.round(this.y / gridSize);
+        console.log(x, y)
+        var seenBlocks = [
+            {y: y-1, x: x+0 },
+            {y: y+1, x: x+0 },
+            {y: y+0, x: x-1 },
+            {y: y+0, x: x+1 },
+        ]
+        .filter(b => {
+            return grid[b.y] && grid[b.y][b.x] && grid[b.y][b.x] != "w"
+        })
+        var block = Math.floor(Math.random() * (seenBlocks.length))
+        block = seenBlocks[block]
+        if(block.y == y) {
+            this.nextX = block.x * gridSize
+            this.directionX = block.x > x ? 1 : -1
+        } else {
+            this.nextY = block.y * gridSize
+            this.directionY = block.y > y ? 1 : -1
+        }            
     }
 
     var pacman = {
@@ -242,7 +242,7 @@
         },
         startStepingVertical: function(dir = 1) {
             if(pacman.nextX || !this.canMoveInDirection({dirY: dir})) return
-            pacman.directionY = pressSpeed * dir
+            pacman.directionY = 2 * dir
             var remaining;
             if(dir > 0) remaining = gridSize - (pacman.y % gridSize)
             else remaining = pacman.y % gridSize
@@ -251,7 +251,7 @@
         }, 
         startStepingHorizontal: function(dir = 1) {
             if(pacman.nextY || !this.canMoveInDirection({dirX: dir})) return
-            pacman.directionX = pressSpeed * dir
+            pacman.directionX = 2 * dir
             var remaining
             if(dir > 0) remaining = gridSize - (pacman.x % gridSize)
             else remaining = pacman.x % gridSize
@@ -268,20 +268,23 @@
             return grid[sy][sx] != "w"            
         },
         moveAndInteractWithGrid: function() {
+            pacman.y += pacman.directionY;
+            pacman.x += pacman.directionX;
+
             var x = Math.round(this.x / gridSize);
             var y = Math.round(this.y / gridSize);        
             var b = grid[y][x]
             if(b == '.') {
                 grid[y][x] = ' '
             }
-            pacman.y += pacman.directionY;
-            pacman.x += pacman.directionX;
 
-            var gx = Math.round(ghost.x / gridSize);
-            var gy = Math.round(ghost.y / gridSize);        
-            if(x == gx && y == gy) {
-                gameOver()
-            }
+            ghosts.forEach(g => {
+                var gx = Math.round(g.x / gridSize);
+                var gy = Math.round(g.y / gridSize);        
+                if(x == gx && y == gy) {
+                    gameOver()
+                }
+            })      
 
             this.changeSpriteBasedOnDirection()
             // stop movement if reached place
@@ -295,6 +298,11 @@
             }            
         }
     }
+
+    var ghosts = [
+        new Ghost(8, 5),
+        new Ghost(2, 6),
+    ]
 
     function draw() {
         ctx.fillStyle = 'black';
@@ -315,7 +323,10 @@
             })
         })
         pacman.pacmanSprite.draw(pacman.x, pacman.y)
-        ghost.ghostSprite.draw(ghost.x, ghost.y)
+        ghosts.forEach(g => 
+            g.ghostSprite.draw(g.x, g.y)
+        )
+        
     }
 
     window.onkeydown = function(event) {
@@ -336,25 +347,30 @@
 
     function gameOver() {
         document.querySelector(".beginScreen").style.display = "flex"
-        clearInterval(gameLoop)
+        cancelAnimationFrame(gameLoop)
+        gameLoop = null
     }
 
     function gameStart() {
         document.querySelector(".beginScreen").style.display = "none";
         var c = document.getElementById("myCanvas");
         ctx = c.getContext("2d");
+        ghosts = [
+            new Ghost(8, 5),
+            new Ghost(2, 6),
+        ]        
         canvasWidth = c.clientWidth;
         canvasHeight = c.clientHeight;
-        gridWidth = canvasWidth / gridSize;
-        gridHeight = canvasHeight / gridSize;
         c.setAttribute("width", canvasWidth);
         c.setAttribute("height", canvasHeight);
         score = 0;
-        var gameLoop = function() {
+        gameLoop = function() {
             pacman.moveAndInteractWithGrid()
-            ghost.move()            
+            ghosts.forEach(g => 
+                g.move()
+            )            
             draw();
-            requestAnimationFrame(gameLoop)
+            if(gameLoop) requestAnimationFrame(gameLoop)
         }
         requestAnimationFrame(gameLoop)
     }
@@ -364,7 +380,7 @@
     function Animan({sprite, row, numCols, numRows}) {
         this.img = new Image();
         this.img.src = sprite;
-        this.imageFrameNumber = 0; // This is changed to make the sprite animate  
+        this.imageFrameNumber = 1; // This is changed to make the sprite animate  
         this.row = row;
         this.img.onload = function() {
             this.heightOfImage = this.img.height / numRows; // find the height of the image
