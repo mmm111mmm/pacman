@@ -145,15 +145,13 @@
     Ghost.prototype.move = function() {
         this.x += this.directionX;
         this.y += this.directionY;
-        if((this.x == this.nextX) ||
-            (this.y == this.nextY))  {
+        if((this.x == this.nextX) || (this.y == this.nextY))  {
             this.nextX = null;
             this.nextY = null;
             this.directionX = 0;
             this.directionY = 0;
         }
-        // if we've nowhere to go, try to chase 
-        // pacman or chose a random direction
+        // If we've nowhere to go
         if(!this.nextY && !this.nextX && !this.tryToChasePacman()) {
             this.chooseRandomDirection()
         }
@@ -170,45 +168,36 @@
             this.ghostSprite.animate({ col: 2, colNum: 2 })
         }    
     }
+    // See if we're on the same path as pacman
+    // and if there's no walls inbetween.
+    // And if not, then set our nextX/Y to pacman.
     Ghost.prototype.tryToChasePacman = function() {
         var x = Math.round(this.x / gridSize);
         var y = Math.round(this.y / gridSize);
         var pX = Math.round(pacman.x / gridSize);
         var pY = Math.round(pacman.y / gridSize);
         var canSee = false
-        // look up and down and left and right
-        // to see if we can see pacman without
-        // seeing a wall first
         if(y == pY) {
-            if(pX < x) 
-                for(var i = x - 1, canSee = true; i > pX && canSee; i--)
-                    canSee = grid[y][i] != "w"
-            else if(pX > x) 
-                for(var i = x + 1, canSee = true; i < pX && canSee; i++)
-                    canSee = grid[y][i] != "w"
+            var max = Math.max(x, pX)
+            for(var i = Math.min(x, pX) + 1, canSee = true; i < max && canSee; i++)
+                canSee = grid[y][i] != "w"
             if(canSee) {
                 this.nextX = pacman.x
                 this.directionX = (pX < x) ? -1: 1;
-                return true;
             }
         } else if(x == pX) {
-            if(pY < y) 
-                for(var i = y - 1, canSee = true; i > pY && canSee; i--)
-                    canSee = grid[i][x] != "w"
-            else if(pY > y) 
-                for(var i = y + 1, canSee = true; i < pY && canSee; i++)
-                    canSee = grid[i][x] != "w"
+            var max = Math.max(y, pY)
+            for(var i = Math.min(y, pY) + 1, canSee = true; i < max && canSee; i++)
+                canSee = grid[i][x] != "w"
             if(canSee) {
                 this.nextY = pacman.y
                 this.directionY = (pY < y) ? -1: 1;
-                return true;
             }
         }     
-        return false;
+        return canSee;
     }
-    // look up, down, left and right
-    // then chose a random location
-    // to move in.
+    // Look up, down, left and right
+    // then chose a random direction.
     Ghost.prototype.chooseRandomDirection = function() {
         var x = Math.round(this.x / gridSize);
         var y = Math.round(this.y / gridSize);
@@ -263,7 +252,7 @@
             pacman.requestX = dir
         },
         // Is our suggested movement a wall?
-        canMoveInDirection: function() {
+        canMoveInRequestDirection: function() {
             var x = this.x / gridSize;
             var y = this.y / gridSize;        
             var sx = x + ((this.requestX > 0) ? 1 : 0)
@@ -272,19 +261,17 @@
             sy = sy + ((this.requestY < 0) ? -1 : 0)
             return grid[sy][sx] != "w"
         },
-        // We process direction requests
-        // when we're fully on a grid peice only
+        // We process direction requests when exactly on a grid peice
         perfectlyOnAGridPeice: function() {
             return ((this.x / gridSize) % 1) == 0 
                && ((this.y / gridSize) % 1) == 0
         },
         // Try to move directions, move, eat pills
         moveAndInteractWithGrid: function() {
-
             // Process direction request
             // or stop if we'd hit a wall
             if(this.perfectlyOnAGridPeice()) {
-                if(this.canMoveInDirection()) {
+                if(this.canMoveInRequestDirection()) {
                     pacman.directionX = pacman.requestX
                     pacman.directionY = pacman.requestY
                 } else {
@@ -292,11 +279,9 @@
                     pacman.directionY = 0
                 }
             }
-
             // move
             pacman.y += pacman.directionY;
             pacman.x += pacman.directionX;
-
             // eat a pill
             var x = Math.round(this.x / gridSize);
             var y = Math.round(this.y / gridSize);        
@@ -304,7 +289,7 @@
             if(b == '.') {
                 grid[y][x] = ' '
             }
-
+            // Change sprite direction
             this.changeSpriteBasedOnDirection()        
         }
     }
@@ -333,7 +318,6 @@
         ghosts.forEach(g => 
             g.ghostSprite.draw(g.x, g.y)
         )
-        
     }
 
     window.onkeydown = function(event) {
