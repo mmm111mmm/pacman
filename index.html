@@ -69,10 +69,7 @@
 <script>
 
     // coloured ghosts
-    // ghost in space
-    // power up pills?
     // level complete!
-    // loading of sprites
 
     document.querySelector(".beginScreen").onclick = function(event) {
         gameStart()
@@ -103,29 +100,25 @@
         ['w','w','w','w','w','w','w','w','w','w','w','w','w','w','w','w','w','w','w'],
     ]
 
+    var sprites = {}
+    var loaded = 0;
+    ["pr1.png","pr2.png","pl1.png","pl2.png","pu1.png",
+    "pu2.png","pd1.png","pd2.png","gu1.png","gu2.png",
+    "gd1.png","gd2.png","gl1.png","gl2.png","gr1.png",
+    "gr2.png"].forEach((s, i, all) => {
+        var im = new Image(); im.src = s
+        sprites[s.substring(0, 3)] = im
+        im.onload = function() {
+            if(++loaded == all.length) gameStart()
+        }
+    })
+
     var gameLoop;
     var gridSize = 20;
     var score = 0;
     var c = document.getElementById("myCanvas");
     var ctx;
 
-    var pr1 = new Image(); pr1.src = './pr1.png'
-    var pr2 = new Image(); pr2.src = './pr2.png'
-    var pl1 = new Image(); pl1.src = './pl1.png'
-    var pl2 = new Image(); pl2.src = './pl2.png'
-    var pu1 = new Image(); pu1.src = './pu1.png'
-    var pu2 = new Image(); pu2.src = './pu2.png'
-    var pd1 = new Image(); pd1.src = './pd1.png'
-    var pd2 = new Image(); pd2.src = './pd2.png'
-    var gu1 = new Image(); gu1.src = './gu1.png'
-    var gu2 = new Image(); gu2.src = './gu2.png'
-    var gd1 = new Image(); gd1.src = './gd1.png'
-    var gd2 = new Image(); gd2.src = './gd2.png'
-    var gl1 = new Image(); gl1.src = './gl1.png'
-    var gl2 = new Image(); gl2.src = './gl2.png'
-    var gr1 = new Image(); gr1.src = './gr1.png'
-    var gr2 = new Image(); gr2.src = './gr2.png'
-    
     // A ghost in the pacman game
     function Ghost(x, y) {
         this.x = x * gridSize
@@ -135,9 +128,9 @@
         this.nextY = null // where we're aiming for
         this.nextX = null // where we're aiming for
 
-        this.currAnim = [gu1, gu2]
+        this.currAnim = [sprites.gu1, sprites.gu2]
         this.animIter = 0
-        this.img = gu1 // what we draw to the screen
+        this.img = sprites.gu1 // what we draw to the screen
         if(this.animLoop) clearInterval(this.animLoop)
         this.animLoop = setInterval(function() {
             this.animIter = (++this.animIter) % this.currAnim.length
@@ -161,10 +154,10 @@
         this.changeSpriteBasedOnDirection()
     }
     Ghost.prototype.changeSpriteBasedOnDirection = function() {
-        if(this.directionY > 0) this.currAnim = [gd1, gd2]
-        else if(this.directionY < 0) this.currAnim = [gu1, gu2]
-        else if(this.directionX > 0) this.currAnim = [gr1, gr2]
-        else if(this.directionX < 0) this.currAnim = [gl1, gl2]
+        if(this.directionY > 0) this.currAnim = [sprites.gd1, sprites.gd2]
+        else if(this.directionY < 0) this.currAnim = [sprites.gu1, sprites.gu2]
+        else if(this.directionX > 0) this.currAnim = [sprites.gr1, sprites.gr2]
+        else if(this.directionX < 0) this.currAnim = [sprites.gl1, sprites.gl2]
     }
     // See if we're on the same path as pacman
     // and if there's no walls inbetween.
@@ -221,9 +214,9 @@
 
     // Single object for the pacman character
     var pacman = {
-        currAnim: [pr1, pr2],
+        currAnim: [sprites.pr1, sprites.pr2],
         animIter: 0,
-        img: pr1, // what we draw to the screen
+        img: sprites.pr1, // what we draw to the screen
         init: function() {
             this.x = gridSize // pos 1,1
             this.y = gridSize // pos 1,1
@@ -238,10 +231,10 @@
             }.bind(this), 120)
         },
         changeSpriteBasedOnDirection: function() {
-            if(pacman.directionY > 0) this.currAnim = [pd1, pd2]
-            else if(pacman.directionY < 0) this.currAnim = [pu1, pu2]
-            else if(pacman.directionX > 0) this.currAnim = [pr1, pr2]
-            else if(pacman.directionX < 0) this.currAnim = [pl1, pl2]
+            if(pacman.directionY > 0) this.currAnim = [sprites.pd1, sprites.pd2]
+            else if(pacman.directionY < 0) this.currAnim = [sprites.pu1, sprites.pu2]
+            else if(pacman.directionX > 0) this.currAnim = [sprites.pr1, sprites.pr2]
+            else if(pacman.directionX < 0) this.currAnim = [sprites.pl1, sprites.pl2]
         },
         // Is our suggested movement a wall?
         canMoveInRequestDirection: function() {
@@ -372,8 +365,6 @@
         }
         requestAnimationFrame(gameLoop)
     }
-
-    gameStart()
 
 </script>
 </html>
