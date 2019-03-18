@@ -68,7 +68,6 @@
 
 <script>
 
-    // coloured ghosts
     // level complete!
 
     document.querySelector(".beginScreen").onclick = function(event) {
@@ -102,12 +101,14 @@
 
     var sprites = {}
     var loaded = 0;
-    ["pr1.png","pr2.png","pl1.png","pl2.png","pu1.png",
-    "pu2.png","pd1.png","pd2.png","gu1.png","gu2.png",
-    "gd1.png","gd2.png","gl1.png","gl2.png","gr1.png",
-    "gr2.png"].forEach((s, i, all) => {
+    ["yel-pr1.png","yel-pr2.png","yel-pl1.png","yel-pl2.png","yel-pu1.png","yel-pu2.png","yel-pd1.png","yel-pd2.png",
+    "red-gu1.png","red-gu2.png","red-gd1.png","red-gd2.png","red-gl1.png","red-gl2.png","red-gr1.png","red-gr2.png",
+    "pnk-gu1.png","pnk-gu2.png", "pnk-gd1.png","pnk-gd2.png","pnk-gl1.png","pnk-gl2.png","pnk-gr1.png","pnk-gr2.png",
+    "ora-gu1.png","ora-gu2.png", "ora-gd1.png","ora-gd2.png","ora-gl1.png","ora-gl2.png","ora-gr1.png","ora-gr2.png",
+    "blu-gu1.png", "blu-gu2.png","blu-gd1.png","blu-gd2.png","blu-gl1.png","blu-gl2.png","blu-gr1.png","blu-gr2.png"]
+    .forEach((s, i, all) => {
         var im = new Image(); im.src = s
-        sprites[s.substring(0, 3)] = im
+        sprites[s.substring(0, 7)] = im
         im.onload = function() {
             if(++loaded == all.length) gameStart()
         }
@@ -120,22 +121,23 @@
     var ctx;
 
     // A ghost in the pacman game
-    function Ghost(x, y) {
+    function Ghost(x, y, colour) {
         this.x = x * gridSize
         this.y = y * gridSize
+        this.colour = colour+"-"
         this.directionX = 0
         this.directionY = 0
         this.nextY = null // where we're aiming for
         this.nextX = null // where we're aiming for
 
-        this.currAnim = [sprites.gu1, sprites.gu2]
+        this.currAnim = [sprites[this.colour+"gu1"]]
         this.animIter = 0
-        this.img = sprites.gu1 // what we draw to the screen
+        this.img = sprites[this.colour+"gu1"] // what we draw to the screen
         if(this.animLoop) clearInterval(this.animLoop)
         this.animLoop = setInterval(function() {
             this.animIter = (++this.animIter) % this.currAnim.length
             this.img = this.currAnim[this.animIter]
-        }.bind(this), 120)        
+        }.bind(this), 120)
     }
     // Move or stop if we get to desired location
     Ghost.prototype.move = function() {
@@ -154,10 +156,10 @@
         this.changeSpriteBasedOnDirection()
     }
     Ghost.prototype.changeSpriteBasedOnDirection = function() {
-        if(this.directionY > 0) this.currAnim = [sprites.gd1, sprites.gd2]
-        else if(this.directionY < 0) this.currAnim = [sprites.gu1, sprites.gu2]
-        else if(this.directionX > 0) this.currAnim = [sprites.gr1, sprites.gr2]
-        else if(this.directionX < 0) this.currAnim = [sprites.gl1, sprites.gl2]
+        if(this.directionY > 0) this.currAnim = [sprites[this.colour+"gd1"], sprites[this.colour+"gd2"]]
+        else if(this.directionY < 0) this.currAnim = [sprites[this.colour+"gu1"], sprites[this.colour+"gu2"]]
+        else if(this.directionX > 0) this.currAnim = [sprites[this.colour+"gr1"], sprites[this.colour+"gr2"]]
+        else if(this.directionX < 0) this.currAnim = [sprites[this.colour+"gl1"], sprites[this.colour+"gl2"]]
     }
     // See if we're on the same path as pacman
     // and if there's no walls inbetween.
@@ -214,9 +216,9 @@
 
     // Single object for the pacman character
     var pacman = {
-        currAnim: [sprites.pr1, sprites.pr2],
+        currAnim: [sprites["yel-pr1"], sprites["yel-pr2"]],
         animIter: 0,
-        img: sprites.pr1, // what we draw to the screen
+        img: sprites["yel-pr1"], // what we draw to the screen
         init: function() {
             this.x = gridSize // pos 1,1
             this.y = gridSize // pos 1,1
@@ -231,10 +233,10 @@
             }.bind(this), 120)
         },
         changeSpriteBasedOnDirection: function() {
-            if(pacman.directionY > 0) this.currAnim = [sprites.pd1, sprites.pd2]
-            else if(pacman.directionY < 0) this.currAnim = [sprites.pu1, sprites.pu2]
-            else if(pacman.directionX > 0) this.currAnim = [sprites.pr1, sprites.pr2]
-            else if(pacman.directionX < 0) this.currAnim = [sprites.pl1, sprites.pl2]
+            if(pacman.directionY > 0) this.currAnim = [sprites["yel-pd1"], sprites["yel-pd2"]]
+            else if(pacman.directionY < 0) this.currAnim = [sprites["yel-pu1"], sprites["yel-pu2"]]
+            else if(pacman.directionX > 0) this.currAnim = [sprites["yel-pr1"], sprites["yel-pr2"]]
+            else if(pacman.directionX < 0) this.currAnim = [sprites["yel-pl1"], sprites["yel-pl2"]]
         },
         // Is our suggested movement a wall?
         canMoveInRequestDirection: function() {
@@ -339,10 +341,10 @@
         ctx = c.getContext("2d");
         grid = JSON.parse(JSON.stringify(originalGrid))
         ghosts = [
-            new Ghost(8, 9),
-            new Ghost(8, 9),
-            new Ghost(8, 9),
-            new Ghost(8, 9),
+            new Ghost(8, 9, "red"),
+            new Ghost(8, 9, "pnk"),
+            new Ghost(8, 9, "ora"),
+            new Ghost(8, 9, "blu"),
         ]        
         pacman.init()
         c.setAttribute("width", c.clientWidth);
